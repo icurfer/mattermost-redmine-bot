@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mm-rdm-bot
+  labels:
+    app: mm-rdm-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mm-rdm-bot
+  template:
+    metadata:
+      labels:
+        app: mm-rdm-bot
+    spec:
+      containers:
+        - name: mm-rdm-bot
+          image: icurfer/mattermost-redmine-bot:0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - name: REDMINE_URL
+              value: ${redmine_url}
+            - name: MM_SLASH_TOKEN
+              value: ${mattermost_token}
+            - name: FERNET_KEY
+              value: ${created_secret}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mm-rdm-bot
+  labels:
+    app: mm-rdm-bot
+spec:
+  type: ClusterIP
+  selector:
+    app: mm-rdm-bot
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mm-rdm-bot
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: mm-rdm-bot.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: mm-rdm-bot
+            port:
+              number: 5000
+        path: /
+        pathType: Prefix
